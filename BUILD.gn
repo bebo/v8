@@ -100,7 +100,7 @@ config("internal_config") {
 
   include_dirs = [ "." ]
 
-  if (is_component_build) {
+  if (true) {
     defines = [
       "V8_SHARED",
       "BUILDING_V8_SHARED",
@@ -126,6 +126,10 @@ config("external_config") {
     defines = [
       "V8_SHARED",
       "USING_V8_SHARED",
+    ]
+  } else {
+    defines = [
+      "V8_SHARED",
     ]
   }
   include_dirs = [ "include" ]
@@ -322,8 +326,10 @@ config("toolchain") {
 # Templates
 #
 
+if (is_mac && is_component_build) {
 template("v8_source_set") {
   source_set(target_name) {
+#STAY SYNC with the other case
     forward_variables_from(invoker, "*", [ "configs" ])
     configs += invoker.configs
     configs -= [ "//build/config/compiler:chromium_code" ]
@@ -338,6 +344,25 @@ template("v8_source_set") {
       configs += [ "//build/config/compiler:optimize_max" ]
     }
   }
+}
+} else {
+template("v8_source_set") {
+  static_library(target_name) {
+    forward_variables_from(invoker, "*", [ "configs" ])
+    configs += invoker.configs
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+    configs += [
+      ":features",
+      ":toolchain",
+    ]
+
+    if (!is_debug || v8_optimized_debug) {
+      configs -= [ "//build/config/compiler:default_optimization" ]
+      configs += [ "//build/config/compiler:optimize_max" ]
+    }
+  }
+}
 }
 
 ###############################################################################
